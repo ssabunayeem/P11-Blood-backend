@@ -29,10 +29,27 @@ async function run() {
 
 
 
+        const database = client.db('p9-bloodDB');
+        const userCollections = database.collection('user');
+        // const requestCollections = database.collection("request");
+
+        app.post('/users', async (req, res) => {
+            const userInfo = req.body;
+            userInfo.role = "buyer";
+            // userInfo.status = "active";
+            userInfo.createdAt = new Date();
+            const result = await userCollections.insertOne(userInfo);
+            res.send(result);
+        });
 
 
-
-
+        app.get('/users/role/:email', async (req, res) => {
+            const { email } = req.params;
+            const query = { email: email };
+            const result = await userCollections.findOne(query);
+            console.log(result);
+            res.send(result);
+        })
 
 
 
