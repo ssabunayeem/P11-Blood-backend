@@ -210,6 +210,12 @@ async function run() {
       const updateDoc = {
         $set: {
           name: updatedData.name,
+
+          phone: updatedData.phone,
+          age: updatedData.age,
+          gender: updatedData.gender,
+          address: updatedData.address,
+
           district: updatedData.district,
           upozila: updatedData.upozila,
           bloodGroup: updatedData.bloodGroup,
