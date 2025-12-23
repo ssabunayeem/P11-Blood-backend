@@ -112,19 +112,57 @@ async function run() {
       res.send(result);
     });
 
+
+
+    // PATCH: update name, mainUrl (photoURL), and/or status
+    app.patch("/update/user", verifyToken, async (req, res) => {
+      const { email, name, mainUrl, status } = req.body;
+
+      if (!email) {
+        return res.status(400).send({ message: "Email is required" });
+      }
+
+      const updateData = {};
+      if (name) updateData.name = name;
+      if (mainUrl) updateData.mainUrl = mainUrl; // matches frontend `user.mainUrl`
+      if (status) updateData.status = status;
+      updateData.updatedAt = new Date();
+
+      try {
+        const result = await userCollections.findOneAndUpdate(
+          { email },
+          { $set: updateData },
+          { returnDocument: "after" } // returns updated user
+        );
+
+        res.send(result.value); // send updated user object
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Update failed" });
+      }
+    });
+
+
+
     // Get all donation requests (Admin)
+    // Admin: all requests with filter & pagination
     app.get("/admin/requests", verifyToken, async (req, res) => {
       const email = req.decoded_email;
       const user = await userCollections.findOne({ email });
-      if (!user || user.role !== "admin")
+
+      if (!user || !["admin", "volunteer"].includes(user.role)) {
         return res.status(403).send({ message: "Forbidden" });
+      }
 
       const requests = await requestCollections
         .find()
         .sort({ createdAt: -1 })
         .toArray();
+
       res.send(requests);
     });
+
+
 
 
 
@@ -205,20 +243,24 @@ async function run() {
       const { status } = req.body;
 
       try {
-        const filter = { _id: new ObjectId(id) };
-        const updateDoc = { $set: { donation_status: status } };
+        const email = req.decoded_email;
+        const user = await userCollections.findOne({ email });
 
-        const result = await requestCollections.updateOne(filter, updateDoc);
-
-        if (result.modifiedCount === 1) {
-          return res.send({ success: true });
+        if (!user || !["admin", "volunteer"].includes(user.role)) {
+          return res.status(403).send({ message: "Forbidden" });
         }
-        res.status(400).send({ success: false, message: "Update failed" });
 
+        const result = await requestCollections.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { donation_status: status } }
+        );
+
+        res.send(result);
       } catch (err) {
-        res.status(500).send({ success: false, message: "Server error" });
+        res.status(500).send({ message: "Server error" });
       }
     });
+
 
     // Update donation request
     app.patch("/requests/edit/:id", verifyToken, async (req, res) => {
@@ -343,6 +385,19 @@ async function run() {
       });
 
       res.send({ url: session.url });
+    });
+
+    app.get("/payments", verifyToken, async (req, res) => {
+      try {
+        const payments = await paymentsCollections
+          .find()
+          .sort({ paidAt: -1 }) // latest first
+          .toArray();
+        res.send(payments);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Failed to fetch payments" });
+      }
     });
 
     app.post("/success-payment", async (req, res) => {
