@@ -52,7 +52,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();     // nayeem
     // Send a ping to confirm a successful connection
 
     const dataBase = client.db("p9-bloodDB");
@@ -197,10 +197,44 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+
+    app.patch("/update/profile", verifyToken, async (req, res) => {
+      const { email } = req.query;
+      const updatedData = req.body;
+
+      if (!email) {
+        return res.status(400).send({ message: "Email is required" });
+      }
+
+      const query = { email };
+      const updateDoc = {
+        $set: {
+          name: updatedData.name,
+          district: updatedData.district,
+          upozila: updatedData.upozila,
+          bloodGroup: updatedData.bloodGroup,
+          photoURL: updatedData.photoURL,
+          updatedAt: new Date(),
+        },
+      };
+
+      const result = await userCollections.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+
+
+    // Nayeem->
+
+    /* await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    ); */
+
+    // <-nayeem//
+
+
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
